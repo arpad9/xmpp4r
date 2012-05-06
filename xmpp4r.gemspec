@@ -1,5 +1,7 @@
 # WARNING : RAKE AUTO-GENERATED FILE.  DO NOT MANUALLY EDIT!
 # RUN : 'rake gem:update_gemspec'
+lib = File.expand_path('../lib/', __FILE__)
+$:.unshift lib unless $:.include?(lib)
 
 require 'xmpp4r/version'
 
