@@ -6,7 +6,7 @@ $:.unshift lib unless $:.include?(lib)
 require 'xmpp4r/version'
 
 Gem::Specification.new do |s|
-  s.authors = ["Lucas Nussbaum", "Stephan Maka", "Glenn Rempe", "David Geller"]
+  s.authors = ["Lucas Nussbaum", "Stephan Maka", "Glenn Rempe", "David Árpád Geller"]
   s.bindir = "bin"
   s.description = "XMPP4R is an XMPP/Jabber library for Ruby."
   s.email = "xmpp4r-devel@gna.org"
