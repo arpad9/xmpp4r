@@ -237,16 +237,18 @@ module Jabber
           read_timeout = (Time.now - @previous_send).ceil + @http_inactivity
         end
 
-        opts = {
-          :read_timeout => read_timeout, # wait this long for a response
-          :use_ssl => @use_ssl           # Set SSL/no SSL
-        }
+        # Not sure how to implement this but
+        # Net::HTTP doesn't seem to take this option
+        #opts = {
+        #  :read_timeout => read_timeout, # wait this long for a response
+        #  :use_ssl => @use_ssl           # Set SSL/no SSL
+        #}
         opts[:verify_mode] =  @verify_mode if @use_ssl   # Allow caller to defeat certificate verify
 
         Jabber::debuglog("#{@protocol_name} REQUEST (#{@pending_requests + 1}/#{@http_requests}) with timeout #{read_timeout}:\n#{request.body}")
-        response = @http.start(@uri.host, @uri.port, nil, nil, nil, nil, opts ) { |http|
+        response = @http.start(@uri.host, @uri.port, nil, nil, nil, nil ) do |http|
           http.request(request)
-        }
+        end
         Jabber::debuglog("#{@protocol_name} RESPONSE (#{@pending_requests + 1}/#{@http_requests}): #{response.class}\n#{response.body}")
 
         unless response.kind_of? Net::HTTPSuccess
