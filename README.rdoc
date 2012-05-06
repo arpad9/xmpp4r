@@ -19,7 +19,8 @@ which can be enabled in your code with:
 
   Jabber::debug = true
 
-NOTE: This version is the "Flying Bear" fork which is, for now,
+NOTE: 
+  This version is the "Flying Bear" fork which is, for now,
   not meant for public consumption.  Do not ask the XMPP4R list for
   help on changes that I've made and do not ask me for help.
 
