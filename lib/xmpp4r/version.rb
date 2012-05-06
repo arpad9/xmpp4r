@@ -6,6 +6,9 @@ require 'xmpp4r/version/helper/responder.rb'
 require 'xmpp4r/version/helper/simpleresponder.rb'
 require 'xmpp4r/version/iq/version.rb'
 
-require 'xmpp4r/xmpp4r'
-
-VERSION = Jabber::VERSION
+module Jabber
+  # XMPP4R Version number.  This is the ONLY place where the version number
+  # should be specified.  This constant is used to determine the version of
+  # package tarballs and generated gems.
+  XMPP4R_VERSION = VERSION = '0.7.0'
+end
