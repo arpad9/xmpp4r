@@ -1,3 +1,11 @@
+XMPP4R 0.7.0 (06/05/2012)
+=======================
+* Exposed the RID and SID in httpbinding/client
+  Need this for passing to a Bosh Javascript page
+* Merged in version changes - put version in version.rb and Jabber::VERSION in Gemfile
+* Fixed deprecated 'loaded' in Gemfile, changed to 'activated'
+* Fixed error in Net::HTTP call with too many parameters (7 for 6).  Took out opts.
+
 XMPP4R 0.5 (15/06/2009)
 =======================
 * Many bugs fixed and tests cleanups (better Ruby 1.9 support, in

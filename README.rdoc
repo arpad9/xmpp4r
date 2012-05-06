@@ -19,6 +19,15 @@ which can be enabled in your code with:
 
   Jabber::debug = true
 
+NOTE: This version is the "Flying Bear" fork which is, for now,
+  not meant for public consumption.  Do not ask the XMPP4R list for
+  help on changes that I've made and do not ask me for help.
+
+  In the future, I will consider engaging the XMPP4R community,
+  such as it is, and merging in changes if they are valuable,
+  time permitting.
+
+    - David Árpád Geller
 
 == Contributors
 
@@ -40,6 +49,7 @@ which can be enabled in your code with:
   Joshua Sierles
   Ripta Pasay <github@r8y.org>
   Seth Fitzsimmons
+  David Árpád Geller <david@socialpicnik.com>
 
 
 == Source Code
