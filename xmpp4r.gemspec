@@ -1,6 +1,8 @@
 # WARNING : RAKE AUTO-GENERATED FILE.  DO NOT MANUALLY EDIT!
 # RUN : 'rake gem:update_gemspec'
 
+require 'xmpp4r/xmpp4r'
+
 Gem::Specification.new do |s|
   s.authors = ["Lucas Nussbaum", "Stephan Maka", "Glenn Rempe", "David Geller"]
   s.bindir = "bin"

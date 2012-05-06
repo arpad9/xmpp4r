@@ -8,7 +8,7 @@ module Jabber
   # XMPP4R Version number.  This is the ONLY place where the version number
   # should be specified.  This constant is used to determine the version of
   # package tarballs and generated gems.
-  XMPP4R_VERSION = VERSION = '0.7'
+  XMPP4R_VERSION = VERSION = '0.7.0'
 end
 
 require 'xmpp4r/client'
