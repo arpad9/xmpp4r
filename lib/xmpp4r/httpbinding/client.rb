@@ -41,6 +41,12 @@ module Jabber
       # to reduce number of HTTP requests
       attr_accessor :http_hold
 
+      # Need to SID and RID available to be able
+      # to create a connection manager and pass
+      # the values to a Bosh Javascript page
+      attr_accessor :http_rid
+      attr_accessor :http_sid
+
       ##
       # Initialize
       # jid:: [JID or String]
