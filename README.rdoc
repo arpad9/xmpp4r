@@ -50,7 +50,7 @@ NOTE:
   Joshua Sierles
   Ripta Pasay <github@r8y.org>
   Seth Fitzsimmons
-  David Árpád Geller <david@socialpicnik.com>
+  David Árpád Geller <github@davidgeller.net>
 
 
 == Source Code
