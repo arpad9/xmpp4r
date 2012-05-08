@@ -90,10 +90,7 @@ module Jabber
         @uri = uri
         @use_ssl = @uri.kind_of? URI::HTTPS
         @protocol_name = "HTTP#{'S' if @use_ssl}"
-        @verify_mode = opts[:ssl_verify] ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE if @use_ssl
-
-        @http_connect = opts[:http_connect].to_i
-        @http_inactivity = opts[:http_inactivity].to_i
+        @verify_mode = @ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE if @use_ssl
 
         @http_rid = IdGenerator.generate_id.to_i
         @pending_rid = @http_rid
@@ -113,6 +110,7 @@ module Jabber
         req_body.attributes['xmlns'] = 'http://jabber.org/protocol/httpbind'
         req_body.attributes['xmlns:xmpp'] = 'urn:xmpp:xbosh'
         req_body.attributes['xmpp:version'] = '1.0'
+        Jabber::debuglog "FOO"
         res_body = post(req_body)
         unless res_body.name == 'body'
           raise 'Response body is no <body/> element'
@@ -215,7 +213,9 @@ module Jabber
         # response, unless it receives the post we are now sending.
         # Net::HTTP defaults to 60 seconds, which would not always be appropriate.
         # In particular, the default would not work if @http_wait is > 60!
-        if @initial_post == true
+        if @read_timeout
+          read_timeout = @read_timeout
+        elsif @initial_post == true
           read_timeout = @http_connect
           @initial_post = false
         elsif @previous_send == Time.at(0)
@@ -224,17 +224,18 @@ module Jabber
           read_timeout = (Time.now - @previous_send).ceil + @http_inactivity
         end
 
-        @http.read_timeout = @read_timeout
-        @http.use_ssl = @use_ssl
-        @http.verify_mode = @verify_mode if @use_ssl # Allow caller to defeat certificate verify
-        @http.http_inactivity = @http_inactivity
-        @http.http_connect = @http_connect
-        @http.http_hold = @http_hold
-        @http.http_wait = @http_wait
-
         Jabber::debuglog("#{@protocol_name} REQUEST (#{@pending_requests + 1}/#{@http_requests}) with timeout #{read_timeout}:\n#{request.body}")
-        response = @http.start(@uri.host, @uri.port, nil, nil, nil, nil ) do |http|
-          http.request(request)
+        begin
+          response = @http.start(@uri.host, @uri.port, nil, nil, nil, nil ) do |http|
+            http.read_timeout = read_timeout
+            http.use_ssl = @use_ssl
+            http.verify_mode = @verify_mode if @use_ssl # Allow caller to defeat certificate verify
+            http.request(request)
+          end
+        rescue Timeout::Error => e
+          message = "Timeout error in Net::HTTP " + e.message
+          Jabber::debuglog message
+          raise message
         end
         Jabber::debuglog("#{@protocol_name} RESPONSE (#{@pending_requests + 1}/#{@http_requests}): #{response.class}\n#{response.body}")
 
