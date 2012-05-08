@@ -230,7 +230,6 @@ module Jabber
         @http.http_inactivity = @http_inactivity
         @http.http_connect = @http_connect
         @http.http_hold = @http_hold
-        @http.keepalive_interval = @keepalive_interval
         @http.http_wait = @http_wait
 
         Jabber::debuglog("#{@protocol_name} REQUEST (#{@pending_requests + 1}/#{@http_requests}) with timeout #{read_timeout}:\n#{request.body}")
