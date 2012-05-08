@@ -47,6 +47,13 @@ module Jabber
       attr_accessor :http_rid
       attr_accessor :http_sid
 
+      # Other Net::HTTP config options
+      attr_accessor :read_timeout
+      attr_accessor :use_ssl
+      attr_accessor :ssl_verify
+      attr_accessor :http_inactivity
+      attr_accessor :http_connect
+
       ##
       # Initialize
       # jid:: [JID or String]
@@ -56,7 +63,10 @@ module Jabber
         @lock = Mutex.new
         @http = proxy || Net::HTTP
         @http_wait = 20
-        @http_hold = 1
+        @http_hold = 2
+        @http_connect = 60      # :http_connect => time in seconds to wait for initial connection
+        @http_inactivity = 60   # :http_inactivity => value to use for http_inactivity in case the server does not specify.
+        @ssl_verify = true      # :ssl_verify => false to defeat peer certificate verify
         @http_content_type = 'text/xml; charset=utf-8'
         @allow_tls = false      # Shall be done at HTTP level
         initialize_for_connect  # Actually unnecessary, but nice to have these variables defined here
@@ -71,42 +81,13 @@ module Jabber
       # uri:: [URI::Generic or String]
       # host:: [String] Optional host to route to
       # port:: [Fixnum] Port for route feature
-      # opts:: [Hash] :ssl_verify => false to defeat peer certificate verify
-      #        [Fixnum] :http_inactivity => value to use for http_inactivity in
-      #                 case the server does not specify.
-      #        [Fixnum] :http_connect => time in seconds to wait for initial
-      #                 connection.
-      def connect(uri, host=nil, port=5222, opts={})
+      def connect( uri, host=nil, port=5222 )
 
         initialize_for_connect  # Initial/default values for new connection, in case
                                 # of connect/close/connect/close/connect on same object...
 
         uri = URI::parse(uri) unless uri.kind_of? URI::Generic
         @uri = uri
-
-        opts = {
-          :ssl_verify => true,
-
-          # When we make the first post, we have no clue what value the server uses for
-          # http_inactivity, since we haven't connected yet!
-          :http_connect => 60,
-
-          # As well, it's possible the server will NOT specify http_inactivity.
-          # XEP-0124 states:
-          #
-          # "If the connection manager did not specify a maximum inactivity period
-          # in the session creation response, then it SHOULD allow the client to be
-          # inactive for as long as it chooses."
-          #
-          # So, we need to default this. If the server sends http_inactivity, then
-          # that value will override our default.
-          :http_inactivity => 60
-
-          # In either case, if the client application has advance knowledge of the values
-          # used by the server, then it should override these defaults using opts.
-
-          }.merge(opts)
-
         @use_ssl = @uri.kind_of? URI::HTTPS
         @protocol_name = "HTTP#{'S' if @use_ssl}"
         @verify_mode = opts[:ssl_verify] ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE if @use_ssl
@@ -243,13 +224,14 @@ module Jabber
           read_timeout = (Time.now - @previous_send).ceil + @http_inactivity
         end
 
-        # Not sure how to implement this but
-        # Net::HTTP doesn't seem to take this option
-        #opts = {
-        #  :read_timeout => read_timeout, # wait this long for a response
-        #  :use_ssl => @use_ssl           # Set SSL/no SSL
-        #}
-        opts[:verify_mode] =  @verify_mode if @use_ssl   # Allow caller to defeat certificate verify
+        @http.read_timeout = @read_timeout
+        @http.use_ssl = @use_ssl
+        @http.verify_mode = @verify_mode if @use_ssl # Allow caller to defeat certificate verify
+        @http.http_inactivity = @http_inactivity
+        @http.http_connect = @http_connect
+        @http.http_hold = @http_hold
+        @http.keepalive_interval = @keepalive_interval
+        @http.http_wait = @http_wait
 
         Jabber::debuglog("#{@protocol_name} REQUEST (#{@pending_requests + 1}/#{@http_requests}) with timeout #{read_timeout}:\n#{request.body}")
         response = @http.start(@uri.host, @uri.port, nil, nil, nil, nil ) do |http|
