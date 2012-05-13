@@ -48,6 +48,11 @@ module Jabber
       attr_accessor :http_sid
       attr_accessor :connection_only
 
+      # In some cases, we may be trying to call a 
+      # close on a non-existent and erroring
+      # connection
+      attr_accessor :status
+
       # Other Net::HTTP config options
       attr_accessor :read_timeout
       attr_accessor :use_ssl
@@ -72,6 +77,24 @@ module Jabber
         @allow_tls = false      # Shall be done at HTTP level
         @connection_only = false # For getting and passing connections to other Bosh clients
         initialize_for_connect  # Actually unnecessary, but nice to have these variables defined here
+      end
+
+      ##
+      # A function to use if you only want to create
+      # a connection for passing off to another Bosh
+      # client.  This could also be done by calling
+      # connect() and setting @connection_only to
+      # true, but this makes it clear and convenient
+      #
+      # uri:: [URI::Generic or String]
+      # host:: [String] Optional host to route to
+      # port:: [Fixnum] Port for route feature
+      def connect_only( uri, host = nil, port = 5222 )
+        @http_wait = 60
+        @read_timeout = 300 
+        @http_inactivity = 60
+        @connection_only = true
+        connect( uri, host, port )
       end
 
       ##
@@ -113,8 +136,16 @@ module Jabber
         req_body.attributes['xmlns'] = 'http://jabber.org/protocol/httpbind'
         req_body.attributes['xmlns:xmpp'] = 'urn:xmpp:xbosh'
         req_body.attributes['xmpp:version'] = '1.0'
-        Jabber::debuglog "FOO"
-        res_body = post(req_body)
+        begin
+          res_body = post(req_body)
+        rescue Net::HTTPBadResponse => e
+          raise
+        rescue Timeout::Error => e
+          raise
+        rescue => e
+          raise
+        end
+
         unless res_body.name == 'body'
           raise 'Response body is no <body/> element'
         end
@@ -191,6 +222,7 @@ module Jabber
         @send_buffer = ''
         @stream_mechanisms = []
         @stream_features = {}
+        @retry_error = 0
       end
 
       ##
@@ -242,9 +274,9 @@ module Jabber
             http.request(request)
           end
         rescue Timeout::Error => e
-          message = "Timeout error in Net::HTTP " + e.message
+          message = "::post Timeout error in Net::HTTP " + e.message
           Jabber::debuglog message
-          raise message
+          raise
         end
         Jabber::debuglog("#{@protocol_name} RESPONSE (#{@pending_requests + 1}/#{@http_requests}): #{response.class}\n#{response.body}")
 
@@ -303,23 +335,38 @@ module Jabber
         rescue REXML::ParseException
           if @exception_block
             Thread.new do
-              Thread.current.abort_on_exception = true
-              close; @exception_block.call(e, self, :parser)
+              #Thread.current.abort_on_exception = true
+              begin
+                close; @exception_block.call(e, self, :parser)
+              rescue
+                Jabber::debuglog( "301 Exit!" )
+                raise
+              end
             end
           else
             Jabber::debuglog "Exception caught when parsing #{@protocol_name} response!"
-            close
             raise
           end
 
+        # Shouldn't retry a 404... 
+        # chances are if it's not there, now
+        # it's not going to be there later.
+        rescue Net::HTTPBadResponse => e
+          Jabber::debuglog("POST error (did NOT retry, rescued): #{e.class}: #{e}")
+          raise
+        rescue Timeout::Error => e
+          Jabber::debuglog("Timeout error (did NOT retry, rescued): #{e.class}: #{e}")
+          raise
         rescue StandardError => e
           Jabber::debuglog("POST error (will retry): #{e.class}: #{e}")
+          raise if @retry_error > 4
           receive_elements_with_rid(current_rid, [])
           # It's not good to resend on *any* exception,
           # but there are too many cases (Timeout, 404, 502)
           # where resending is appropriate
           # TODO: recognize these conditions and act appropriate
           send_data(data)
+          @retry_error += 1
         end
       end
 
@@ -338,19 +385,46 @@ module Jabber
             data = @send_buffer
             @send_buffer = ''
 
+            @post_num = 0
             Thread.new do
-              Thread.current.abort_on_exception = true
-              post_data(data)
+              Jabber::debuglog( "new thread: " + Thread.current.inspect )
+              #Thread.current.abort_on_exception = true
+              begin
+                Jabber::debuglog( "post_num = " + @post_num.to_s ) if @post_num > 0
+                Jabber::debuglog( "Reposting data" ) if @post_num > 0
+                post_data(data)
+                @post_num += 1
+              rescue Net::HTTPBadResponse => e
+                Jabber::debuglog("Bad Response, in thread " + Thread.current.inspect + " error (did NOT retry, rescued): #{e.class}: #{e}")
+                raise
+              rescue Timeout::Error => e
+                Jabber::debuglog("Timeout, in thread " + Thread.current.inspect + " error (did NOT retry, rescued): #{e.class}: #{e}")
+                raise
+              rescue StandardError => e
+                Jabber::debuglog("Standard Error, in thread " + Thread.current.inspect + " error (did NOT retry, rescued): #{e.class}: #{e}")
+                raise
+              end
             end
 
           elsif !limited_by_requests
             Thread.new do
               Thread.current.abort_on_exception = true
-              # Defer until @http_polling has expired
-              wait = @last_send + @http_polling - Time.now
-              sleep(wait) if wait > 0
-              # Ignore locking, it's already threaded ;-)
-              send_data('')
+              begin
+                # Defer until @http_polling has expired
+                wait = @last_send + @http_polling - Time.now
+                sleep(wait) if wait > 0
+                # Ignore locking, it's already threaded ;-)
+                send_data('')
+              rescue Net::HTTPBadResponse => e
+                Jabber::debuglog( "Thread: " + Thread.current + " " + e )
+                raise
+              rescue Timeout::Error => e
+                Jabber::debuglog( "Thread: " + Thread.current + " " + e )
+                raise
+              rescue StandardError => e
+                Jabber::debuglog( "Thread: " + Thread.current + " " + e )
+                raise
+              end
             end
           end
 

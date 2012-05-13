@@ -49,7 +49,7 @@ module Jabber
       @ssl_verifycb = nil
       @features_timeout = 10
       @keepalive_interval = 60
-      @use_ssl = false
+      @use_ssl = @use_ssl ? true : false
     end
 
     ##
