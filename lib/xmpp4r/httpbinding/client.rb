@@ -46,6 +46,7 @@ module Jabber
       # the values to a Bosh Javascript page
       attr_accessor :http_rid
       attr_accessor :http_sid
+      attr_accessor :connection_only
 
       # Other Net::HTTP config options
       attr_accessor :read_timeout
@@ -69,6 +70,7 @@ module Jabber
         @ssl_verify = true      # :ssl_verify => false to defeat peer certificate verify
         @http_content_type = 'text/xml; charset=utf-8'
         @allow_tls = false      # Shall be done at HTTP level
+        @connection_only = false # For getting and passing connections to other Bosh clients
         initialize_for_connect  # Actually unnecessary, but nice to have these variables defined here
       end
 
@@ -82,6 +84,7 @@ module Jabber
       # host:: [String] Optional host to route to
       # port:: [Fixnum] Port for route feature
       def connect( uri, host=nil, port=5222 )
+        @keepalive_interval = nil if @connection_only
 
         initialize_for_connect  # Initial/default values for new connection, in case
                                 # of connect/close/connect/close/connect on same object...
@@ -139,6 +142,12 @@ module Jabber
       # a stanza.
       def ensure_one_pending_request
         return if is_disconnected?
+        
+        # I don't want a request sent if
+        # I'm just using this to start aconneciton, it
+        # messes up the rid sequence when passing
+        # a connection off
+        return if @connection_only
 
         if @lock.synchronize { @pending_requests } < 1
           send_data('')
