@@ -68,7 +68,7 @@ module Jabber
         super(jid)
         @lock = Mutex.new
         @http = proxy || Net::HTTP
-        @http_wait = 20
+        @http_wait = 60
         @http_hold = 2
         @http_connect = 60      # :http_connect => time in seconds to wait for initial connection
         @http_inactivity = 60   # :http_inactivity => value to use for http_inactivity in case the server does not specify.
@@ -164,6 +164,16 @@ module Jabber
         receive_elements_with_rid(@http_rid, res_body.children)
 
         @features_sem.run
+      end
+
+      ##
+      # Send an empty body with specific attributes
+      #
+      # attributes:: [Hash] key, value attributes for
+      #              insertion into the body
+      def send_body( attributes = {} )
+        @body_attributes = attributes
+        post_data
       end
 
       ##
@@ -296,7 +306,7 @@ module Jabber
       ##
       # Prepare data to POST and
       # handle the result
-      def post_data(data)
+      def post_data( data = '' )
         req_body = nil
         current_rid = nil
 
@@ -313,9 +323,20 @@ module Jabber
               req_body += " rid='#{@http_rid += 1}'"
               req_body += " sid='#{@http_sid}'"
               req_body += " xmlns='http://jabber.org/protocol/httpbind'"
-              req_body += ">"
-              req_body += data
-              req_body += "</body>"
+              
+              # Want to be able to add attributes,
+              # specifically for pause='xx' but maybe
+              # for other things, too
+              ( @body_attributes || [] ).each do |key, value|
+                req_body += " #{ key }='#{ value }'"
+              end
+              unless data == ''
+                req_body += " >"
+                req_body += data
+                req_body += "</body>"
+              else
+                req_body += "/>"
+              end
               current_rid = @http_rid
 
               @previous_send = @last_send
