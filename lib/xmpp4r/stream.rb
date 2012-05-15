@@ -582,7 +582,6 @@ module Jabber
         if pr > 0
           n += 1
           Jabber::debuglog("TRYING TO CLOSE, STILL PROCESSING #{pr} STANZAS")
-          #puts("TRYING TO CLOSE, STILL PROCESSING #{pr} STANZAS")
           sleep 0.1
         end
       end
