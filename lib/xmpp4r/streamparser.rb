@@ -79,6 +79,15 @@ module Jabber
         parser.parse
       rescue REXML::ParseException => e
         @listener.parse_failure(e)
+      rescue IOError => e
+        #FIXME: There has to be a better way than this.
+        # Looks like the connection is being closed as the
+        # stream is being parsed? Will have to investigate.
+        Jabber::debuglog( "IOError in parser, stream closed: " + e.message )
+        raise
+      rescue => e
+        Jabber::debuglog( "Error in parser: " + e.message )
+        raise
       end
     end
   end
