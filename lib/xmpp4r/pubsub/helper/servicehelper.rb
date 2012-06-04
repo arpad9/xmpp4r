@@ -263,11 +263,15 @@ module Jabber
       # Create a new node on the pubsub service
       # node:: [String] the node name - otherwise you get a automatically generated one (in most cases)
       # configure:: [Jabber::PubSub::NodeConfig] if you want to configure your node (default nil)
+      # create_attributes:: [Hash] if you want to add attributes to the create element: hash keys must be strings
       # return:: [String]
-      def create_node(node = nil, configure = Jabber::PubSub::NodeConfig.new)
+      def create_node(node = nil, configure = Jabber::PubSub::NodeConfig.new, create_attributes = {})
         rnode = nil
         iq = basic_pubsub_query(:set)
-        iq.pubsub.add(REXML::Element.new('create')).attributes['node'] = node
+        create_xml = REXML::Element.new('create')
+        create_xml.add_attribute('node', node)
+        create_xml.add_attributes(create_attributes)
+        iq.pubsub.add create_xml
         if configure
           if configure.kind_of?(Jabber::PubSub::NodeConfig)
             iq.pubsub.add(configure)
