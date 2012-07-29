@@ -354,7 +354,7 @@ module Jabber
       # node:: [String]
       # return:: [Hash] of { node => symbol }
       def get_affiliations(node = nil)
-        iq = basic_pubsub_query(:get)
+        iq = basic_pubsub_query(:get, true)
         affiliations = iq.pubsub.add(REXML::Element.new('affiliations'))
         affiliations.attributes['node'] = node
         res = nil
@@ -383,7 +383,7 @@ module Jabber
       # node:: [String]
       # return:: [Array] of [Jabber::Pubsub::Subscription]
       def get_subscriptions_from(node)
-        iq = basic_pubsub_query(:get)
+        iq = basic_pubsub_query(:get, true)
         entities = iq.pubsub.add(REXML::Element.new('subscriptions'))
         entities.attributes['node'] = node
         res = nil
